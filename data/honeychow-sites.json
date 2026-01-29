@@ -4451,6 +4451,18 @@
       "category": "coding"
     },
     {
+      "name": "Kali Linux Forums",
+      "uri_check": "https://forums.kali.org/u/{username}/summary",
+      "hit_code": 200,
+      "hit_string": "Summary -",
+      "miss_string": "Page Not Found",
+      "miss_code": 404,
+      "known": [
+        "eris2cats"
+      ],
+      "category": "tech"
+    },
+    {
       "name": "kashipara",
       "uri_check": "https://www.kashipara.com/ajax/checkNewUser.php",
       "uri_pretty": "https://www.kashipara.com/profile/user/{account}",
