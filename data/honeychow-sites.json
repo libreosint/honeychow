@@ -6814,7 +6814,7 @@
       "name": "pypi",
       "uri_check": "https://pypi.org/user/{account}/",
       "hit_code": 200,
-      "hit_string": "Profile of",
+      "hit_string": " projects",
       "miss_string": "Page Not Found (404) \u00b7 PyPI",
       "miss_code": 404,
       "known": [

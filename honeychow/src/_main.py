@@ -1,9 +1,10 @@
 import asyncio
 
 import aiohttp
+from rich.status import Status
 
-from ._api import console, HoneyChow
 from ._cli import parse_args
+from ._core import console, HoneyChow
 
 
 async def main():
@@ -16,9 +17,12 @@ async def main():
                 session=session, max_concurrent=args.workers, quiet=args.quiet
             )
 
-            # Fetch sites from remote
-            if not await honeychow.fetch_sites():
-                return
+            with Status(status="[dim]Initialising…[/dim]") as status:
+                honeychow.check_updates(status=status)
+
+                # Fetch sites from remote
+                if not await honeychow.fetch_sites(status=status):
+                    return
 
             # Handle --list-sites
             if args.list_sites:
