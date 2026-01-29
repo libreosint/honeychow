@@ -4452,9 +4452,9 @@
     },
     {
       "name": "Kali Linux Forums",
-      "uri_check": "https://forums.kali.org/u/{username}/summary",
+      "uri_check": "https://forums.kali.org/u/{account}/summary",
       "hit_code": 200,
-      "hit_string": "Summary -",
+      "hit_string": "<title>Summary -",
       "miss_string": "Page Not Found",
       "miss_code": 404,
       "known": [
