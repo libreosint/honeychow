@@ -36,8 +36,7 @@ class HoneyChow:
     # Database sources in order of priority
     DATABASE_SOURCES = [
         # "https://codeberg.org/rly0nheart/honeychow/raw/branch/master/data/honeychow-sites.json",
-        "https://raw.githubusercontent.com/libreosint/honeychow/master/data/honeychow-sites.json",
-        "https://whatsmyname.me/static/data/wmn-data.json",
+        "https://raw.githubusercontent.com/libreosint/honeychow/refs/heads/master/data/honeychow-sites.json",
     ]
 
     def __init__(
