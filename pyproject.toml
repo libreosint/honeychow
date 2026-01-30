@@ -24,9 +24,14 @@ dependencies = [
     "rich>=14.3",
 ]
 
+[project.optional-dependencies]
+dev = [
+    "ruff",
+]
+
 [project.urls]
-Repository = "https://codeberg.org/rly0nheart/honeychow"
-Issues = "https://codeberg.org/rly0nheart/honeychow/issues"
+Repository = "https://github.com/libreosint/honeychow"
+Issues = "https://github.com/libreosint/honeychow/issues"
 
 [project.scripts]
 honeychow = "honeychow.src._main:start"
