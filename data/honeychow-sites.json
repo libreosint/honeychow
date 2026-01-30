@@ -102,14 +102,13 @@
     },
     {
       "name": "Reddit",
-      "uri_check": "https://www.reddit.com/user/{account}",
-      "uri_pretty": "https://www.reddit.com/user/{account}",
+      "uri_check": "https://www.reddit.com/user/{account}/about.json",
       "hit_code": 200,
-      "hit_string": "?sort=hot",
-      "miss_string": "",
-      "miss_code": 200,
+      "hit_string": "\"kind\": \"t2\"",
+      "miss_string": "\"message\": \"Not Found\"",
+      "miss_code": 404,
       "header": {
-        "User-Agent": "Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/W.X.Y.Z Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)"
+        "User-Agent": "Mozilla/5.0 (X11; Linux x86_64; rv:147.0) Gecko/20100101 Firefox/147.0"
       },
       "category": "forum"
     },
@@ -1815,6 +1814,18 @@
       "category": "social"
     },
     {
+      "name": "Crates.io",
+      "uri_check": "https://crates.io/api/v1/users/{account}",
+      "hit_code": 200,
+      "hit_string": "\"login\":",
+      "miss_string": "\"errors\"",
+      "miss_code": 404,
+      "known": [
+        "rly0nheart"
+      ],
+      "category": "coding"
+    },
+    {
       "name": "cracked_io",
       "uri_check": "https://cracked.io/{account}",
       "hit_code": 200,
@@ -2607,8 +2618,8 @@
       "name": "Fandom",
       "uri_check": "https://www.fandom.com/u/{account}",
       "hit_code": 200,
-      "hit_string": "| Profile | Fandom",
-      "miss_string": "Not Found",
+      "hit_string": "<h1 class=\"profile-info-card__name\">",
+      "miss_string": "<div class=\"error__text\">",
       "miss_code": 404,
       "known": [
         "EJacobs94",
@@ -6811,7 +6822,7 @@
       "category": "finance"
     },
     {
-      "name": "pypi",
+      "name": "PyPI",
       "uri_check": "https://pypi.org/user/{account}/",
       "hit_code": 200,
       "hit_string": " projects",

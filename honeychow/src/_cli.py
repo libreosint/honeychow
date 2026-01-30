@@ -37,6 +37,9 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-o", "--output", metavar="PATH", help="Export results to CSV file"
     )
+    parser.add_argument(
+        "-T", "--table", action="store_true", help="Show results tables"
+    )
 
     parser.add_argument(
         "-O",
@@ -72,6 +75,12 @@ def parse_args() -> argparse.Namespace:
         "--list-categories",
         action="store_true",
         help="List all available categories",
+    )
+    parser.add_argument(
+        "-d",
+        "--database",
+        metavar="PATH",
+        help="Load sites database from local JSON file instead of remote",
     )
     parser.add_argument(
         "-v",

@@ -20,8 +20,11 @@ async def main():
             with Status(status="[dim]Initialising…[/dim]") as status:
                 honeychow.check_updates(status=status)
 
-                # Fetch sites from remote
-                if not await honeychow.fetch_sites(status=status):
+                # Load sites from local file or fetch from remote
+                if args.database:
+                    if not honeychow.database_from_file(args.database, status=status):
+                        return
+                elif not await honeychow.database_from_remote(status=status):
                     return
 
             # Handle --list-sites
@@ -50,13 +53,15 @@ async def main():
                 show_failed=args.failed,
             )
 
-            honeychow.print_results(
-                found=found,
-                not_found=not_found,
-                failed=failed,
-                show_not_found=args.not_found,
-                show_failed=args.failed,
-            )
+            if args.table:
+                honeychow.print_tables(
+                    found=found,
+                    not_found=not_found,
+                    failed=failed,
+                    show_not_found=args.not_found,
+                    show_failed=args.failed,
+                )
+
             honeychow.print_summary(
                 username=args.username, found=found, not_found=not_found, failed=failed
             )

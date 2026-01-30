@@ -6,7 +6,6 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import aiohttp
-from rich.box import ROUNDED
 from rich.progress import (
     Progress,
     SpinnerColumn,
@@ -34,13 +33,10 @@ class SiteResult:
 
 
 class HoneyChow:
-    # In-memory cache for sites data (shared across instances)
-    _sites_cache: list[dict] | None = None
-
     # Database sources in order of priority
     DATABASE_SOURCES = [
-        "https://codeberg.org/rly0nheart/honeychow/raw/branch/master/data/honeychow-sites.json",
-        "https://raw.githubusercontent.com/rly0nheart/honeychow/master/data/honeychow-sites.json",
+        # "https://codeberg.org/rly0nheart/honeychow/raw/branch/master/data/honeychow-sites.json",
+        "https://raw.githubusercontent.com/libreosint/honeychow/master/data/honeychow-sites.json",
         "https://whatsmyname.me/static/data/wmn-data.json",
     ]
 
@@ -69,39 +65,26 @@ class HoneyChow:
         if result:
             console.print(result)
 
-    async def fetch_sites(self, status: Optional[Status] = None) -> bool:
+    async def database_from_remote(self, status: Optional[Status] = None) -> bool:
         """
-        Fetch sites database from remote sources with in-memory caching.
+        Fetch sites database from remote sources.
         Tries multiple sources in order until one succeeds.
         Returns True if successful, False otherwise.
         """
-        # Return cached data if available
-        if HoneyChow._sites_cache is not None:
-            self.sites = HoneyChow._sites_cache
-            if not self.quiet:
-                console.print(
-                    f" [bold green]+[/bold green] Loaded {len(self.sites)} sites from cache"
-                )
-            return True
-
         for source_url in self.DATABASE_SOURCES:
             domain = urlparse(source_url).netloc
             if isinstance(status, Status):
-                status.update(
-                    f" [dim]Initialising sites' database from: {domain}…[/dim]"
-                )
+                status.update(f"[dim]Fetching sites' database from {domain}…[/dim]")
             try:
                 async with self.session.get(source_url) as response:
                     if response.status == 200:
                         data = await response.json(content_type=None)
                         self.sites = data.get("sites", [])
-                        # Cache for future use
-                        HoneyChow._sites_cache = self.sites
                         if not self.quiet:
                             if isinstance(status, Status):
                                 status.stop()
                             console.print(
-                                f" [bold green]+[/bold green] Loaded {len(self.sites)} sites from {domain}"
+                                f"[[bold green]+[/bold green]] Loaded {len(self.sites)} sites from {domain}"
                             )
                         return True
             except (
@@ -112,18 +95,64 @@ class HoneyChow:
                 if isinstance(status, Status):
                     status.stop()
                 console.log(
-                    f" [bold red]✘[/bold red] Failed to fetch database: {response.status} {e}"
+                    f"[[bold red]✘[/bold red]] Failed to fetch database: {response.status} {e}"
                 )
                 continue
 
         console.print(
-            " [bold red]✘[/bold red] Failed to fetch sites database from all sources"
+            "[[bold red]✘[/bold red]] Failed to fetch sites database from all sources"
         )
         return False
 
+    def database_from_file(
+        self, filepath: str, status: Optional[Status] = None
+    ) -> bool:
+        """
+        Load sites database from a local JSON file.
+        Returns True if successful, False otherwise.
+        """
+        if isinstance(status, Status):
+            status.update(f"[dim]Loading sites' database from: {filepath}…[/dim]")
+
+        try:
+            with open(filepath, "r", encoding="utf-8") as f:
+                data = json.load(f)
+                self.sites = data.get("sites", [])
+                if not self.quiet:
+                    if isinstance(status, Status):
+                        status.stop()
+                    console.print(
+                        f"[[bold green]+[/bold green]] Loaded {len(self.sites)} sites from {filepath}"
+                    )
+                return True
+        except FileNotFoundError:
+            if isinstance(status, Status):
+                status.stop()
+            console.print(
+                f"[[bold red]✘[/bold red]] Database file not found: {filepath}"
+            )
+            return False
+        except json.JSONDecodeError as e:
+            if isinstance(status, Status):
+                status.stop()
+            console.print(
+                f"[[bold red]✘[/bold red]] Invalid JSON in database file: {e}"
+            )
+            return False
+        except Exception as e:
+            if isinstance(status, Status):
+                status.stop()
+            console.print(f"[[bold red]✘[/bold red]] Failed to load database: {e}")
+            return False
+
     def list_sites(self):
         """List all available sites"""
-        table = Table(title="Available Sites", box=ROUNDED, expand=True)
+        table = Table(
+            show_header=False,
+            show_edge=False,
+            show_lines=False,
+            title="Available Sites",
+        )
         table.add_column("Name", style="cyan")
         table.add_column("Category", style="magenta")
 
@@ -131,7 +160,7 @@ class HoneyChow:
             table.add_row(site.get("name", "Unknown"), site.get("category", "unknown"))
 
         console.print(table)
-        console.print(f"\n [bold]Total: {len(self.sites)} sites[/bold]")
+        console.print(f"\n[bold]Total: {len(self.sites)} sites[/bold]")
 
     def list_categories(self):
         """List all available categories"""
@@ -140,7 +169,12 @@ class HoneyChow:
             category = site.get("category", "unknown")
             categories[category] = categories.get(category, 0) + 1
 
-        table = Table(title="Available Categories", box=ROUNDED, expand=True)
+        table = Table(
+            show_header=False,
+            show_edge=False,
+            show_lines=False,
+            title="Available Categories",
+        )
         table.add_column("Category", style="cyan")
         table.add_column("Sites", style="green", justify="right")
 
@@ -309,7 +343,7 @@ class HoneyChow:
             ]
             if not sites_to_check:
                 console.print(
-                    f" [red]No matching sites found for: {', '.join(sites)}[/red]"
+                    f"[red]No matching sites found for: {', '.join(sites)}[/red]"
                 )
                 return [], [], []
 
@@ -324,7 +358,7 @@ class HoneyChow:
 
         if not self.quiet:
             console.print(
-                f" ✺ Searching for '{username}' across {len(sites_to_check)} sites...\n"
+                f"[[bold blue]~[/bold blue]] Searching for '{username}' across {len(sites_to_check)} sites...\n"
             )
 
         semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -345,9 +379,9 @@ class HoneyChow:
             TextColumn("•"),
             TextColumn("[cyan]{task.fields[current_site]}[/cyan]"),
             TextColumn("•"),
-            TextColumn("[green]Found({task.fields[found]})[/green],"),
-            TextColumn("[yellow]NotFound({task.fields[not_found]})[/yellow],"),
-            TextColumn("[red]Failed({task.fields[failed]})[/red]"),
+            TextColumn("[green]found={task.fields[found]}[/green],"),
+            TextColumn("[yellow]not_found={task.fields[not_found]}[/yellow],"),
+            TextColumn("[red]failed={task.fields[failed]}[/red]"),
             TimeRemainingColumn(),
             console=console,
             disable=self.quiet,
@@ -362,8 +396,8 @@ class HoneyChow:
                 failed=0,
             )
 
-            for coro in asyncio.as_completed(tasks):
-                site_name, result = await coro
+            for coroutine in asyncio.as_completed(tasks):
+                site_name, result = await coroutine
 
                 progress.update(task, advance=1, current_site=site_name)
 
@@ -372,27 +406,27 @@ class HoneyChow:
                     progress.update(task, failed=len(failed))
                     if show_failed and not self.quiet:
                         progress.console.print(
-                            f"[bold red]✘[/bold red] {result.site_name}: {result.error}"
+                            f"[[bold red]✘[/bold red]] {result.site_name}: {result.error}"
                         )
                 elif result.exists:
                     found.append(result)
                     progress.update(task, found=len(found))
                     if not self.quiet:
                         progress.console.print(
-                            f"[bold green]✔[/bold green] {result.site_name}: {result.url}"
+                            f"[[bold green]✔[/bold green]] {result.site_name}: {result.url}"
                         )
                 else:
                     not_found.append(result)
                     progress.update(task, not_found=len(not_found))
                     if show_not_found and not self.quiet:
                         progress.console.print(
-                            f"[bold yellow]✘[/bold yellow] {result.site_name}: Not found"
+                            f"[[bold yellow]✘[/bold yellow]] {result.site_name}: {result.status_code}"
                         )
 
         found.sort(key=lambda x: x.confidence, reverse=True)
         return found, not_found, failed
 
-    def print_results(
+    def print_tables(
         self,
         found: list[SiteResult],
         not_found: Optional[list[SiteResult]] = None,
@@ -405,18 +439,19 @@ class HoneyChow:
             return
 
         if not found:
-            console.print("\n[bold yellow]✘[/bold yellow] No accounts found.")
+            console.print("\n[[bold yellow]✘[/bold yellow]] No accounts found.")
         else:
             table = Table(
-                show_header=True,
-                header_style="bold white",
+                show_header=False,
+                show_edge=False,
+                show_lines=False,
                 title=f"Found {len(found)} accounts",
-                box=ROUNDED,
-                expand=True,
+                title_style="bold green",
+                highlight=True,
             )
-            table.add_column("Site", style="dim")
+            table.add_column("Site")
             table.add_column("Category", style="yellow")
-            table.add_column("URL", style="blue", overflow="fold")
+            table.add_column("URL")
             table.add_column("Confidence", justify="right")
 
             for result in found:
@@ -433,13 +468,14 @@ class HoneyChow:
         # Show not found sites if requested
         if show_not_found and not_found:
             table = Table(
-                show_header=True,
-                header_style="bold yellow",
+                show_header=False,
+                show_edge=False,
+                show_lines=False,
                 title=f"Not found on {len(not_found)} sites",
-                box=ROUNDED,
-                expand=True,
+                title_style="bold yellow",
+                highlight=True,
             )
-            table.add_column("Site", style="cyan")
+            table.add_column("Site")
             table.add_column("Category", style="yellow")
             table.add_column("Status Code", justify="right")
 
@@ -453,13 +489,14 @@ class HoneyChow:
         # Show failed sites if requested
         if show_failed and failed:
             table = Table(
-                show_header=True,
-                header_style="bold red",
+                show_header=False,
+                show_edge=False,
+                show_lines=False,
                 title=f"Failed {len(failed)} sites",
-                box=ROUNDED,
-                expand=True,
+                title_style="bold red",
+                highlight=True,
             )
-            table.add_column("Site", style="cyan")
+            table.add_column("Site")
             table.add_column("Category", style="yellow")
             table.add_column("Error", style="red")
 
@@ -485,24 +522,31 @@ class HoneyChow:
         for result in found:
             by_category[result.category] = by_category.get(result.category, 0) + 1
 
-        console.print("\n[bold]━━━━━━━━━ Summary ━━━━━━━━━[/bold]")
+        console.print("\n[bold]━━━━━━━━━━━━━ Summary ━━━━━━━━━━━━━[/bold]")
         console.print(f"[bold]Username:[/bold] '{username}'")
         console.print(f"[bold]Total sites checked:[/bold] {total}")
         console.print()
-        console.print(f"[bold green]✔[/bold green] Found: {len(found)}")
-        console.print(f"[bold yellow]✘[/bold yellow] Not found: {len(not_found)}")
-        console.print(f"[bold red]✘[/bold red] Failed: {len(failed)}")
+        console.print(f"[[bold green]✔[/bold green]] Found: {len(found)}")
+        console.print(f"[[bold yellow]✘[/bold yellow]] Not found: {len(not_found)}")
+        console.print(f"[[bold red]✘[/bold red]] Failed: {len(failed)}")
         console.print()
 
         success_rate = 100 * len(found) // max(1, total - len(failed))
         console.print(
-            f"[bold]Success rate:[/bold] {len(found)}/{total - len(failed)} ({success_rate}%)"
+            f"[bold]Success rate:[/bold] {success_rate}% ({len(found)}/{total - len(failed)})"
         )
 
         if by_category:
             console.print("\n[bold]Found by category:[/bold]")
+            table = Table(
+                show_header=False, show_edge=False, show_lines=False, highlight=True
+            )
+            table.add_column("Category", justify="right", style="yellow")
+            table.add_column("Accounts", justify="left")
             for category, count in sorted(by_category.items(), key=lambda x: -x[1]):
-                console.print(f"  • {category}: {count}")
+                table.add_row(category, str(count))
+
+            console.print(table)
 
     @staticmethod
     def export_csv(
@@ -567,4 +611,4 @@ class HoneyChow:
                         ]
                     )
 
-        console.print(f"[green]Results exported to {filepath}[/green]")
+        console.print(f"[[bold green]+[/bold green]] Results exported to {filepath}")
