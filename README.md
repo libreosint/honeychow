@@ -7,7 +7,7 @@ Search for usernames across 705+ websites simultaneously to identify where accou
 ## Installation
 
 ```bash
-pip install honeychow
+pip install git+https://github.com/libreosint/honeychow.git
 ```
 
 Requires Python 3.13+
