@@ -6,6 +6,7 @@ from typing import Optional
 from urllib.parse import urlparse
 
 import aiohttp
+from rich.bar import Bar
 from rich.progress import (
     Progress,
     SpinnerColumn,
@@ -83,7 +84,7 @@ class HoneyChow:
                             if isinstance(status, Status):
                                 status.stop()
                             console.print(
-                                f"[[bold green]+[/bold green]] Loaded {len(self.sites)} sites from {domain}"
+                                f"Loaded {len(self.sites)} sites from {domain}"
                             )
                         return True
             except (
@@ -121,7 +122,7 @@ class HoneyChow:
                     if isinstance(status, Status):
                         status.stop()
                     console.print(
-                        f"[[bold green]+[/bold green]] Loaded {len(self.sites)} sites from {filepath}"
+                        f"Loaded {len(self.sites)} sites from [file://{filepath}]{filepath}"
                     )
                 return True
         except FileNotFoundError:
@@ -357,7 +358,7 @@ class HoneyChow:
 
         if not self.quiet:
             console.print(
-                f"[[bold blue]~[/bold blue]] Searching for '{username}' across {len(sites_to_check)} sites...\n"
+                f"Searching for '@{username}' across {len(sites_to_check)} sites:\n"
             )
 
         semaphore = asyncio.Semaphore(self.max_concurrent)
@@ -405,21 +406,21 @@ class HoneyChow:
                     progress.update(task, failed=len(failed))
                     if show_failed and not self.quiet:
                         progress.console.print(
-                            f"[[bold red]✘[/bold red]] {result.site_name}: {result.error}"
+                            f"[bold red]✘[/bold red] {result.site_name}: {result.error}"
                         )
                 elif result.exists:
                     found.append(result)
                     progress.update(task, found=len(found))
                     if not self.quiet:
                         progress.console.print(
-                            f"[[bold green]✔[/bold green]] {result.site_name}: {result.url}"
+                            f"[bold green]✔[/bold green] {result.site_name}: {result.url}"
                         )
                 else:
                     not_found.append(result)
                     progress.update(task, not_found=len(not_found))
                     if show_not_found and not self.quiet:
                         progress.console.print(
-                            f"[[bold yellow]✘[/bold yellow]] {result.site_name}: {result.status_code}"
+                            f"[bold yellow]✘[/bold yellow] {result.site_name}: {result.status_code}"
                         )
 
         found.sort(key=lambda x: x.confidence, reverse=True)
@@ -521,31 +522,48 @@ class HoneyChow:
         for result in found:
             by_category[result.category] = by_category.get(result.category, 0) + 1
 
-        console.print("\n[bold]━━━━━━━━━━━━━ Summary ━━━━━━━━━━━━━[/bold]")
-        console.print(f"[bold]Username:[/bold] '{username}'")
-        console.print(f"[bold]Total sites checked:[/bold] {total}")
-        console.print()
-        console.print(f"[[bold green]✔[/bold green]] Found: {len(found)}")
-        console.print(f"[[bold yellow]✘[/bold yellow]] Not found: {len(not_found)}")
-        console.print(f"[[bold red]✘[/bold red]] Failed: {len(failed)}")
-        console.print()
-
         success_rate = 100 * len(found) // max(1, total - len(failed))
-        console.print(
-            f"[bold]Success rate:[/bold] {success_rate}% ({len(found)}/{total - len(failed)})"
+
+        summary_table = Table(
+            box=None,
+            highlight=True,
+            title="Stats:",
+            title_justify="left",
+            title_style="bold",
+        )
+        summary_table.add_row("Username:", username)
+        summary_table.add_row("Found:", str(len(found)), style="bold green")
+        summary_table.add_row("Not Found:", str(len(not_found)), style="bold yellow")
+        summary_table.add_row("Failed:", str(len(failed)), style="bold red")
+        summary_table.add_row("Total Sites Checked:", str(total), style="bold")
+        summary_table.add_row(
+            "Success Rate:",
+            f"{success_rate}% ({len(found)}/{total - len(failed)})",
+            style="bold",
         )
 
-        if by_category:
-            console.print("\n[bold]Found by category:[/bold]")
-            table = Table(
-                show_header=False, show_edge=False, show_lines=False, highlight=True
-            )
-            table.add_column("Category", justify="right", style="yellow")
-            table.add_column("Accounts", justify="left")
-            for category, count in sorted(by_category.items(), key=lambda x: -x[1]):
-                table.add_row(category, str(count))
+        console.print("\n", summary_table)
 
-            console.print(table)
+        if by_category:
+            total_found = len(found)
+            sorted_items = sorted(by_category.items(), key=lambda x: -x[1])
+            max_count = sorted_items[0][1]
+
+            summary_table = Table(
+                title="Found by Category:",
+                title_style="bold",
+                title_justify="left",
+                show_header=True,
+                box=None,
+                highlight=True,
+            )
+
+            for category, count in sorted_items:
+                pct = count / total_found
+                bar = Bar(size=max_count, begin=0, end=count, width=20)
+                summary_table.add_row(category, bar, str(count), f"{pct:.0%}")
+
+            console.print("\n", summary_table)
 
     @staticmethod
     def export_csv(
