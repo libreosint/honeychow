@@ -72,6 +72,10 @@ there's an
 Indian-South African fast-food called **Bunny Chow**) Anyway, I needed a
 project name and here we are.
 
+## Contributing
+
+Report false positives/negatives by open an issue. If you can fix the error, fork the repo, fix the problem, then open a pull request.
+
 ## License
 
 MIT License. See [choosealicense.com](https://choosealicense.com/licenses/mit/) for details.
